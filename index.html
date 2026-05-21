@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>얼룩말영어학원 중3 동아(이) 3·4과 통합앱</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        /* 3D 플래시카드 회전축 표준 속성 버그 수정 */
+        .flashcard { transform-style: preserve-3d; transition: transform 0.5s; }
+        .flipped { transform: rotateY(180deg); }
+        .card-front, .card-back { backface-visibility: hidden; position: absolute; inset: 0; padding: 1.25rem; overflow-y: auto; }
+        .card-back { transform: rotateY(180deg); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeIn { animation: fadeIn 0.25s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 antialiased font-sans">
+
+    <header class="sticky top-0 bg-slate-800 border-b border-slate-700 shadow-md z-50 px-4 py-3 flex justify-between items-center max-w-md mx-auto">
+        <div class="flex items-center gap-2">
+            <span class="text-xl">🦓</span>
+            <h1 class="text-sm font-black text-slate-200 tracking-wider">얼룩말영어학원 <span class="text-indigo-400 font-bold">내신 ALL-IN</span></h1>
+        </div>
+        <select id="lessonSelector" onchange="switchLesson()" class="bg-slate-700 text-white text-xs font-semibold rounded-md px-2 py-1.5 focus:outline-none border border-slate-600">
+            <option value="3">3과: Heal the World</option>
+            <option value="4">4과: Open Your Mind</option>
+        </select>
+    </header>
+
+    <nav class="bg-slate-800 border-b border-slate-700 sticky top-[49px] z-40 flex justify-around text-xs font-bold max-w-md mx-auto shadow-sm">
+        <button onclick="switchTab('vocab')" id="tab-vocab" class="w-full py-3.5 text-center border-b-2 border-indigo-500 text-indigo-400 transition-colors">전수 어휘장</button>
+        <button onclick="switchTab('grammar')" id="tab-grammar" class="w-full py-3.5 text-center border-b-2 border-transparent text-slate-400 transition-colors">통합 어법</button>
+        <button onclick="switchTab('text')" id="tab-text" class="w-full py-3.5 text-center border-b-2 border-transparent text-slate-400 transition-colors">지문/대화문</button>
+    </nav>
+
+    <main class="p-4 max-w-md mx-auto mb-16 min-h-screen">
+        
+        <section id="section-vocab" class="block space-y-4">
+            <div class="text-center text-[11px] text-slate-400 bg-slate-800/50 py-1.5 rounded-lg border border-slate-800">
+                카드를 터치하면 뜻, 유의어, 어원 정보가 반전됩니다.
+            </div>
+            
+            <div class="relative w-full h-[320px] my-2 cursor-pointer [perspective:1000px]" onclick="flipCard()">
+                <div id="flashcard" class="flashcard w-full h-full bg-slate-800 rounded-2xl shadow-xl border border-slate-700 flex items-center justify-center relative transform-gpu">
+                    <div class="card-front flex flex-col justify-center items-center">
+                        <span id="vocab-word" class="text-3xl font-extrabold text-indigo-400 tracking-tight">address</span>
+                        <span id="vocab-pron" class="text-sm font-mono text-slate-400 mt-2 bg-slate-900/60 px-2 py-0.5 rounded">[ǝdrés]</span>
+                    </div>
+                    <div class="card-back bg-slate-800 flex flex-col justify-start text-left space-y-3 pt-4">
+                        <div>
+                            <span class="text-xs font-bold text-indigo-400 block mb-0.5">🇰🇷 한국어 뜻</span>
+                            <p id="vocab-meaning" class="text-sm font-semibold text-white bg-slate-900/40 p-2 rounded border border-slate-700/50"></p>
+                        </div>
+                        
+                        <div id="eng-def-container">
+                            <span class="text-xs font-bold text-emerald-400 block mb-0.5">🇬🇧 교과서 영영 풀이</span>
+                            <p id="vocab-eng" class="text-[11px] text-slate-300 bg-slate-900/60 p-2 rounded border border-slate-700/30 leading-relaxed font-mono"></p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 pt-1 text-[11px]">
+                            <div class="bg-slate-900/40 p-2 rounded border border-slate-700/30">
+                                <span class="font-bold text-amber-400 block mb-0.5">🔄 유의어 (Synonyms)</span>
+                                <span id="vocab-syn" class="text-slate-300 leading-tight"></span>
+                            </div>
+                            <div class="bg-slate-900/40 p-2 rounded border border-slate-700/30">
+                                <span class="font-bold text-cyan-400 block mb-0.5">🌿 어원학적 분석</span>
+                                <span id="vocab-etym" class="text-slate-300 leading-tight"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center px-2 mt-4">
+                <button onclick="prevVocab()" class="bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-xs font-bold shadow-sm active:bg-slate-700">이전 단어</button>
+                <span id="vocab-index" class="text-xs font-mono font-bold text-slate-400 bg-slate-950 px-3 py-1 rounded-full">1 / 40</span>
+                <button onclick="nextVocab()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm active:bg-indigo-700">다음 단어</button>
+            </div>
+        </section>
+
+        <section id="section-grammar" class="hidden space-y-4">
+            <div id="grammar-content" class="space-y-4"></div>
+        </section>
+
+        <section id="section-text" class="hidden space-y-4">
+            <div class="flex bg-slate-800 p-1 rounded-lg text-xs font-bold mb-3 border border-slate-700">
+                <button id="btn-subtext-dialog" onclick="switchSubText('dialog')" class="w-full py-2 rounded-md text-center bg-slate-700 text-indigo-400 shadow-sm">교과서 대화문 전구문</button>
+                <button id="btn-subtext-main" onclick="switchSubText('main')" class="w-full py-2 rounded-md text-center text-slate-400">교과서 본문 입체분석</button>
+            </div>
+            <div id="text-container" class="space-y-3"></div>
+        </section>
+
+    </main>
+
+    <script>
+        // 런타임 크래시 방지를 위한 완전한 객체 초기화 구조 설계
+        const appData = {
+            3: { vocab: [], grammar: [], dialog: [], main: [] },
+            4: { vocab: [], grammar: [], dialog: [], main: [] }
+        };
+
+        // ==================== 3과 데이터 로드 ====================
+        appData[3].vocab = [
+            { word: "address", pron: "[ǝdrés]", meaning: "주소, 연설하다, 해결하다, 이야기하다, 부르다", eng: "the words and numbers that are used to describe the location", syn: "speech, lecture, resolve, tackle", etym: "ad-(to) + directus(바르게 하다)" },
+            { word: "arrange", pron: "[ǝréind3]", meaning: "배치하다, 준비하다, 마련하다, 정리하다, 계획하다", eng: "to put a group of things or people in a particular order or position", syn: "organize, classify, plan, array", etym: "a-(to) + rang(열, 줄)" },
+            { word: "background", pron: "[bækgraund]", meaning: "배경, 출신, 경력, 바탕", eng: "the area that is behind the main thing that you are looking at", syn: "origin, context, experience", etym: "back(뒤) + ground(바닥)" },
+            { word: "bath", pron: "[bæθ]", meaning: "목욕, 목욕물, 욕조, 욕실 (bathe: 목욕하다)", eng: "the act of washing our bodies in a large container of water", syn: "washing, soak, shower", etym: "P.Gmc. batham(온천, 목욕)" },
+            { word: "blind", pron: "[blaind]", meaning: "시각장애의, 맹인의, 맹목적인, 눈멀게 하다", eng: "", syn: "sightless, unseeing, visionless", etym: "P.Gmc. blindaz(흐릿한)" },
+            { word: "brush", pron: "[bras]", meaning: "닦다, 빗다, 양치, 붓, 브러시", eng: "", syn: "sweep, comb, clean, scrub", etym: "O.Fr. broce(덤불, 잔가지)" },
+            { word: "clearly", pron: "[klíǝrli]", meaning: "분명하게, 명확히, 밝게, 또박또박", eng: "in a way that is easy to see, hear or understand", syn: "distinctly, obviously, plainly", etym: "clarus(맑은) + -ly" },
+            { word: "deliver", pron: "[dilívar]", meaning: "전달하다, 배달하다, 전하다, 구해내다, 분만하다", eng: "to take something to a person or place", syn: "carry, transport, distribute, hand over", etym: "de-(away) + liberare(자유롭게)" },
+            { word: "do one's best", pron: "[-] ", meaning: "최선을 다하다 (= try one's utmost)", eng: "", syn: "strive, try one's utmost, exert", etym: "do + best(최선)" },
+            { word: "donation", pron: "[dounéisən]", meaning: "기부, 기증, 헌혈, 모금, 성금", eng: "something that you give to help a person or organization", syn: "charity, gift, contribution, offering", etym: "donare(선물하다, 주다)" },
+            { word: "elderly", pron: "[éldərli]", meaning: "노인층, 중장년층, 노후, 어른, 나이든", eng: "", syn: "aged, old, senior, advanced in age", etym: "ledo(나이) + -ly" },
+            { word: "feed", pron: "[fi:d]", meaning: "먹이, 사료, 공급하다, 먹이다 (fed-fed)", eng: "", syn: "nourish, provide food, provision", etym: "fodjan(기르다, 먹이다)" },
+            { word: "fur", pron: "[fǝ:r]", meaning: "털, 모피", eng: "", syn: "coat, hair, hide, fleece", etym: "forrer(안을 대다)" },
+            { word: "get along with", pron: "[-] ", meaning: "~와 잘 지내다, 어울리다, 사귀다", eng: "", syn: "get on with, harmonize, socialize", etym: "get + along" },
+            { word: "get together", pron: "[-] ", meaning: "모으다, 만나다, 합치다, 조직하다", eng: "", syn: "gather, assemble, meet, convene", etym: "get + together" },
+            { word: "give a hand", pron: "[-] ", meaning: "A의 일손을 돕다, 도와주다", eng: "", syn: "help, assist, aid, lend a hand", etym: "give + hand" },
+            { word: "greet", pron: "[gi:t]", meaning: "인사하다, 맞이하다, 받다, 환영하다, 반기다", eng: "", syn: "welcome, salute, hail", etym: "gretan(인사하다)" },
+            { word: "keep in mind", pron: "[-] ", meaning: "명심하다 (= bear / have in mind)", eng: "", syn: "remember, bear in mind", etym: "keep + in mind" },
+            { word: "land", pron: "[lænd]", meaning: "땅, 토지, 지역, 국토, 착륙하다", eng: "to come down through the air onto the ground or another surface", syn: "touch down, arrive, ground", etym: "P.Gmc. landom" },
+            { word: "line up", pron: "[-] ", meaning: "늘어세우다, 줄을 서다", eng: "", syn: "queue, row, align", etym: "line + up" },
+            { word: "make sure", pron: "[-] ", meaning: "반드시 ~하다, ~임을 확인하다", eng: "", syn: "ensure, confirm, verify", etym: "make + sure" },
+            { word: "manager", pron: "[mænidzər]", meaning: "관리인, 매니저, 감독, 경영자, 부장", eng: "someone who is in charge of a business, department, etc.", syn: "director, supervisor, boss", etym: "manus(손)" },
+            { word: "matter", pron: "[mætar]", meaning: "문제, 물질, 중요하다", eng: "to be important", syn: "count, weigh, be significant", etym: "materia(기초 재료)" },
+            { word: "mess", pron: "[mes]", meaning: "엉망, 혼란, 난장판", eng: "", syn: "untidiness, clutter, chaos", etym: "missus(접시->혼잡)" },
+            { word: "neighborhood", pron: "[néibərhùd]", meaning: "이웃, 인근, 주변 동네의", eng: "an area of a town or city", syn: "district, community, vicinity", etym: "neah(가까운) + gebur" },
+            { word: "nursing home", pron: "[-] ", meaning: "사설 요양원, 양호 시설, 양로원", eng: "", syn: "care home, rest home", etym: "nursing + home" },
+            { word: "pack", pron: "[pæk]", meaning: "싸다, 채우다, 짐, 꾸러미", eng: "", syn: "wrap, bundle, box", etym: "M.Du. pac" },
+            { word: "politely", pron: "[pəláitli]", meaning: "정중하게, 공손하게, 예의 바르게", eng: "", syn: "courteously, respectfully", etym: "politus(다듬어진)" },
+            { word: "recording", pron: "[rikɔ́:rdiŋ]", meaning: "기록, 녹음, 음반, 녹화", eng: "the act of storing sound or images", syn: "audio, video, tape", etym: "re-(again) + cor(마음)" },
+            { word: "remove", pron: "[rimú:v]", meaning: "제거하다, 없애다, 삭제하다, 치우다", eng: "to move or take something away from a place", syn: "eliminate, delete, erase", etym: "re-(away) + movere" },
+            { word: "rewarding", pron: "[riwɔ́:rdin]", meaning: "가치가 있는, 보람 있는", eng: "", syn: "satisfying, fulfilling, fruitful", etym: "re-(again) + warder" },
+            { word: "select", pron: "[silékt]", meaning: "선택하다, 선발하다, 고르다", eng: "to choose something or someone", syn: "choose, pick, opt for", etym: "se-(apart) + legere(고르다)" },
+            { word: "site", pron: "[sait]", meaning: "사이트, 현장, 장소, 부지", eng: "the place where something is", syn: "location, place, spot", etym: "situs(위치)" },
+            { word: "slowly", pron: "[slóuli]", meaning: "천천히, 느리게, 점점", eng: "", syn: "gradually, gently", etym: "slaw + -ly" },
+            { word: "spot", pron: "[spat]", meaning: "장소, 점, 관광지, 얼룩, 발견하다", eng: "a particular space or area", syn: "place, location, mark", etym: "M.Du. spotte" },
+            { word: "teen", pron: "[ti:n]", meaning: "10대의, 청소년", eng: "between 13 and 19 years old", syn: "adolescent, youth", etym: "-tien(10)" },
+            { word: "village", pron: "[vílid3]", meaning: "마을, 농촌, 시골의", eng: "a small town in the country", syn: "hamlet, settlement", etym: "villa(저택)" },
+            { word: "volunteer", pron: "[väləntíər]", meaning: "봉사하다, 자원하다, 자발적인 참가자", eng: "a person who does a job without being paid", syn: "helper, unpaid worker", etym: "voluntas(의지)" },
+            { word: "vote", pron: "[vout]", meaning: "투표, 표, 선거, 투표하다", eng: "", syn: "ballot, elect, poll", etym: "votum(맹세)" },
+            { word: "wing", pron: "[wiŋ]", meaning: "날개, 진영, 건물 부속 동", eng: "a part of an animal's body that is used for flying", syn: "branch, annex, arm", etym: "O.N. vaengr" }
+        ];
+
+        appData[3].grammar = [
+            { title: "🦓 사역동사 5형식 문형 원리", desc: "have, make, let + 목적어 + 목적격보어 구조. 목적어가 행동하는 주체면 동사원형, 당하는 대상이면 과거분사(P.P.)를 배치합니다.", ex: "• He made his brother <b>clean</b> the room. (원형)<br>• He made the room <b>cleaned</b>. (수동)" },
+            { title: "🦓 지각동사 + 목적어 + 보어 구조식", desc: "see, hear, watch, feel 등 지각동사 뒤 목적어가 직접 행동하면 동사원형 또는 진행을 강조하는 현재분사(-ing)를 사용합니다.", ex: "• I heard someone <b>call</b> my name.<br>• I saw a girl <b>singing</b> songs." },
+            { title: "🦓 It ~ that 강조구문 메커니즘", desc: "문장의 핵심 요소(주어, 목적어, 부사구)를 강조구문 틀에 기입하여 '바로 ~이다'라고 정형화합니다. 동사는 강조할 수 없습니다.", ex: "• It was Tom <b>that</b> broke the vase yesterday." }
+        ];
+
+        // 이미지 버그 수정: 동적 플레이스홀더 텍스트 그래픽 처리 (절대 경로 오류 완전 배제)
+        appData[3].dialog = [
+            { imgText: "Packing+Donation+Books", eng: "B: What are all these boxes and books for? G: I'm packing the books for the donation center. Can you give me a hand?", kor: "이 모든 상자들과 책들은 무엇을 위한 거니? 나는 기부 센터를 위해 책들을 꾸리고 있어. 나를 좀 도와줄 수 있니?", tip: "What ~ for?는 목적 탐색 숙어. Give a hand는 일손을 돕다(=help)." },
+            { imgText: "Writing+Addresses", eng: "B: Sure. What do you want me to do? G: Please write the address on the boxes. B: No problem.", kor: "물론이지. 너는 내가 무엇을 하기를 원하니? 상자들 위에 주소를 써 주라. 문제없어.", tip: "want + 목적어 + to부정사 구조 5형식 완성." },
+            { imgText: "Baking+Cookies+Mess", eng: "B: What is this mess? G: I'm baking cookies. B: Why are you baking so many cookies? G: They're for the people at the nursing home.", kor: "이 난장판은 뭐야? 나는 쿠키를 굽는 중이야. 왜 너는 그렇게 많은 쿠키를 굽고 있니? 그것들은 양로원에 계신 분들을 위한 것이야.", tip: "현재진행형 시제 가동 상태 및 nursing home 어휘 복합 매칭." },
+            { imgText: "Kind+Volunteers", eng: "B: That's very nice of you. G: Can you give me a hand? B: Sure. What do you want me to do?", kor: "너는 매우 멋지구나. 나 좀 도와줄 수 있니? 물론이지. 너는 내가 무엇을 하길 원하니?", tip: "사람의 성질을 타겟팅하는 형용사이므로 전치사 of + 목적격 배치 규칙 가동." },
+            { imgText: "Gift+Boxes", eng: "G: Please put the cookies in the gift boxes. Three cookies in each box. B: Okay.", kor: "선물 상자 안에 쿠키를 넣어줘. 각각의 상자 안에 쿠키 3개씩. 알겠어.", tip: "each 단수 취급 원칙 고수로 단수명사 box 배치 필수." }
+        ];
+
+        appData[3].main = [
+            { imgText: "Yeosu+Wall+Paintings", eng: "Many people like to take pictures in front of wall paintings. They make old neighborhoods bright and new.", kor: "많은 사람들이 벽화 앞에서 사진을 찍는 것을 좋아합니다. 그것들은 낡은 동네를 밝고 새롭게 만듭니다.", tip: "make + 목적어 + 형용사 목적격보어 (5형식). 보어 자리 부사 절대 불가." },
+            { imgText: "School+Art+Club", eng: "Last month, I visited a village with wall paintings. I thought, 'I'm in the club. Why don't we do wall paintings?'", kor: "지난달에, 저는 벽화 마을을 방문했습니다. 저는 생각했습니다. '나는 동아리야. 우리가 벽화를 그리면 어떨까?'", tip: "과거 확정 지시어와 과거시제 일치 연동 설계." },
+            { imgText: "Meeting+With+Manager", eng: "We applied for it, and our club was selected! The project manager had us meet at the painting site at 9 a.m.", kor: "우리는 그것에 지원했습니다. 그리고 우리 동아리가 선택되었습니다! 프로젝트 매니저는 우리를 오전 9시에 그릴 장소에서 만나도록 했습니다.", tip: "<b>사역동사 had + 목적어 + 동사원형(meet)</b> 5형식 최고 빈출 타겟 문장." },
+            { imgText: "Painting+Flowers", eng: "Minsu painted some flowers and Jiwon did some background drawings. Our club painted for about five hours.", kor: "민수는 약간의 꽃들을 그렸습니다. 그리고 지원이는 배경 그림들을 좀 그렸습니다. 우리 동아리는 약 5시간 동안 그렸습니다.", tip: "for + 숫자 기간 한정 규칙 수렴 패턴." },
+            { imgText: "So+Real+Painting", eng: "Minsu was proud of his flower painting. He said, 'My flower is so real that a bee landed on it.'", kor: "민수는 그의 꽃 그림에 대해 매우 자랑스러워했습니다. 그는 말했습니다. '내 그림은 너무 진짜 같아서 벌이 그 위에 내려앉았어.'", tip: "<b>so + 형용사 + that + 결과절</b> 연계 정밀 독해 코어 구문." }
+        ];
+
+
+        // ==================== 4과 데이터 로드 ====================
+        appData[4].vocab = [
+            { word: "acting", pron: "[æktiŋ]", meaning: "연기, 연극, 움직이는, 대리의 (act: 행동하다)", eng: "", syn: "performance, playing", etym: "Lat. actus(행동)" },
+            { word: "assign", pron: "[asáin]", meaning: "부여하다, 할당하다, 지정하다, 정하다", eng: "", syn: "allocate, allot, appoint", etym: "ad-(to) + signare(표시하다)" },
+            { word: "awake", pron: "[ǝwéik]", meaning: "깨다, 잠에서 깨다, 깨어나다", eng: "not sleeping", syn: "conscious, alert", etym: "a-(강조) + wacan" },
+            { word: "beat", pron: "[bi:t]", meaning: "치다, 이기다, 두드리다, 고동치다", eng: "to make a regular movement or sound", syn: "pulsate, throb, hit", etym: "P.Gmc. bautan" },
+            { word: "belong to", pron: "[-] ", meaning: "~의 것이다, ~에 속하다", eng: "", syn: "be owned by, pertain to", etym: "be-(강조) + langian" },
+            { word: "bone", pron: "[boun]", meaning: "뼈, 골격, 유골", eng: "", syn: "skeleton, frame", etym: "P.Gmc. bainam" },
+            { word: "bottom", pron: "[bá:təm]", meaning: "바닥, 아래, 밑바닥, 최하의", eng: "the lowest part of something", syn: "base, floor, foundation", etym: "P.Gmc. buthmam" },
+            { word: "brain", pron: "[brain]", meaning: "뇌, 두뇌, 머리", eng: "", syn: "intellect, mind", etym: "P.Gmc. bragnam" },
+            { word: "brush", pron: "[bras]", meaning: "양치, 붓, 브러시, 닦다", eng: "to remove something with a brush or with your hand", syn: "comb, sweep, scrub", etym: "O.Fr. broce" },
+            { word: "brush off", pron: "[-] ", meaning: "솔로 털어내다, 무시하다, 거부하다", eng: "", syn: "dismiss, reject, ignore", etym: "brush + off" },
+            { word: "caffeine", pron: "[kæfi:n]", meaning: "카페인", eng: "", syn: "stimulant", etym: "Ger. Kaffein" },
+            { word: "character", pron: "[kæriktər]", meaning: "캐릭터, 인물, 성격, 문자, 품성", eng: "strong personal qualities such as the ability to deal with difficult situations", syn: "personality, nature, trait", etym: "kharakter(인장)" },
+            { word: "convenience", pron: "[kənvi:njəns]", meaning: "편의, 편리, 편익", eng: "", syn: "advantage, handiness", etym: "con- + venire(오다)" },
+            { word: "convenient", pron: "[kənvi njənt]", meaning: "편리한, 간편한, 손쉬운", eng: "allowing you to do something easily or without trouble", syn: "handy, useful, accessible", etym: "conveniens" },
+            { word: "cruel", pron: "[krů:ǝl]", meaning: "잔인한, 잔혹한, 모진", eng: "", syn: "brutal, savage, merciless", etym: "crudelis" },
+            { word: "day off", pron: "[-] ", meaning: "비번, 쉬는 날, 하루 휴가", eng: "a day when you do not go to work, school, etc.", syn: "holiday, vacation, break", etym: "day + off" },
+            { word: "detective", pron: "[ditéktiv]", meaning: "형사, 탐정, 수사관", eng: "", syn: "investigator, sleuth", etym: "de-(un-) + tegere(덮다)" },
+            { word: "dig", pron: "[dig]", meaning: "파다, 발굴하다, 캐내다", eng: "to move soil, sand, snow, etc., in order to create a hole", syn: "excavate, hollow, scoop", etym: "dician(파다)" },
+            { word: "dirt", pron: "[də:rt]", meaning: "흙, 먼지, 때", eng: "loose earth or soil", syn: "earth, soil, dust", etym: "drit(오물)" },
+            { word: "end up", pron: "[-] ", meaning: "~하게 되다, 결국 ~되다", eng: "", syn: "finish, wind up", etym: "end + up" },
+            { word: "fall in love with", pron: "[-] ", meaning: "~와 사랑에 빠지다", eng: "", syn: "enamored, adore", etym: "fall + love" },
+            { word: "focus", pron: "[fóukəs]", meaning: "중심, 초점, 집중하다", eng: "to give special attention to one particular person or thing", syn: "concentrate, center", etym: "focus(화로, 중심)" },
+            { word: "helpful", pron: "[hélpfəl]", meaning: "도움이 되는, 유용한, 유익한", eng: "", syn: "useful, beneficial, handy", etym: "help + -ful" },
+            { word: "hole", pron: "[houl]", meaning: "구멍, 홀, 구덩이", eng: "an empty space in something solid", syn: "pit, cavity, gap", etym: "hulaz" },
+            { word: "light", pron: "[lait]", meaning: "빛, 가벼운, 밝은", eng: "", syn: "weightless, bright", etym: "lehtaz(가벼운)" },
+            { word: "marry", pron: "[mæri]", meaning: "결혼하다, 혼인하다", eng: "", syn: "wed, espouse", etym: "maritus" },
+            { word: "muscle", pron: "[másl]", meaning: "근육", eng: "a body tissue that can contract and produce movement", syn: "sinew, brawn", etym: "musculus(작은쥐)" },
+            { word: "object", pron: "[ábdzikt]", meaning: "물건, 객체, 것, 반대하다", eng: "a thing that you can see and touch but is not alive", syn: "item, article, thing", etym: "ob- + jacere(던지다)" },
+            { word: "online", pron: "[à:nlá인]", meaning: "온라인의, 온라인으로", eng: "", syn: "connected, networked", etym: "on + line" },
+            { word: "pick up", pron: "[-] ", meaning: "집다, 태워주다, 배우다", eng: "", syn: "lift, gather, collect", etym: "pick + up" },
+            { word: "raise", pron: "[reiz]", meaning: "높이다, 올리다, 키우다, 기르다", eng: "to take care of children or young animals until completely grown", syn: "bring up, nurture, elevate", etym: "reisa" },
+            { word: "return", pron: "[rité:rn]", meaning: "돌아오다, 돌려주다, 반품하다", eng: "", syn: "give back, restore, refund", etym: "re- + tornare" },
+            { word: "shiny", pron: "[ʃáini]", meaning: "빛나는, 반짝이는, 반들반들한", eng: "smooth and bright", syn: "bright, gleaming, glossy", etym: "scinan + -y" },
+            { word: "skip", pron: "[skip]", meaning: "거르다, 생략하다, 건너뛰다", eng: "to pass over or not do something", syn: "omit, bypass, overlook", etym: "skippen" },
+            { word: "stand for", pron: "[-] ", meaning: "~를 나타내다, 상징하다, 대표하다", eng: "", syn: "represent, symbolize, mean", etym: "stand + for" },
+            { word: "steal", pron: "[sti:l]", meaning: "훔치다, 빼앗다 (stole-stolen)", eng: "", syn: "thieve, pilfer, rob", etym: "stelan" },
+            { word: "summary", pron: "[sáməri]", meaning: "요약, 개괄, 약식", eng: "", syn: "abstract, outline, synopsis", etym: "summa" },
+            { word: "tube", pron: "[tju:b]", meaning: "관, 튜브, 터널", eng: "a long and empty object that is usually round, like a pipe", syn: "pipe, cylinder, hose", etym: "tubus" },
+            { word: "unfortunately", pron: "[anfó:rtsənətli]", meaning: "불행하게도, 유감스럽게도", eng: "used to say that something bad or unlucky has happened", syn: "unluckily, regrettably", etym: "in-(not) + fortuna" },
+            { word: "wide", pron: "[waid]", meaning: "넓은, 광범위한, 널리", eng: "measured from side to side", syn: "broad, extensive, vast", etym: "widaz" }
+        ];
+
+        appData[4].grammar = [
+            { title: "🦓 The + 비교급, the + 비교급", desc: "'~하면 할수록 더욱 더 ~하다' 비례 구조식입니다. 원래 문맥 속 형용사나 부사가 앞으로 도치 전진 이동합니다.", ex: "• <b>The harder</b> you dig, <b>the faster</b> you'll finish." },
+            { title: "🦓 핵심 식별어 since 완전정복", desc: "1. 시간 완료 시제와 연동되는 '~이래로', 2. 원인과 이유의 부사절을 유도하는 '~때문에' 구조를 정확히 쪼개 판별합니다.", ex: "• I have known him <b>since</b> he was young. (이래로)<br>• <b>Since</b> every single muscle hurt, he couldn't dig. (때문에)" },
+            { title: "🦓 최상급 표현의 다변화 변형 공식", desc: "최상급 의미를 부정주어나 비교급 구조를 활용해 동일 의미의 다른 문장으로 재구현하는 서술형 고난도 패턴입니다.", ex: "• Mt. Everest is higher than <b>any other mountain</b> (단수명사)." }
+        ];
+
+        appData[4].dialog = [
+            { imgText: "Korean+Subway", eng: "B: How do you feel about the subway in Korea? G: I think that it's very clean.", kor: "너는 한국의 지하철에 대해 어떻게 생각하니? 나는 그것이 매우 깨끗하다고 생각해.", tip: "How do you feel about ~? 의견 타겟팅 숙어 구문." },
+            { imgText: "Smartphones+In+Class", eng: "G: We can use smartphones during classes from next week. B: I think it will be very useful.", kor: "우리는 다음 주부터 수업 동안에 스마트폰을 사용할 수 있어. 나는 그것이 매우 유용하다고 생각해.", tip: "during 뒤 특정 한정 명사구 수반 상태 점검 규칙." },
+            { imgText: "Energy+Drinks+Caffeine", eng: "B: Why are you always drinking energy drinks? G: Because they help me stay awake.", kor: "너는 왜 항상 에너지 드링크를 마시고 있니? 왜냐하면 그것들이 나를 깨어있도록 돕기 때문이야.", tip: "준사역동사 help + 목적어 + 원형보어(stay). awake 서술 형용사." },
+            { imgText: "Online+Shopping", eng: "T: You like shopping on the Internet, don't you? S: Yes, I do. How do you feel about online shopping, Tony?", kor: "너는 인터넷으로 쇼핑하는 것을 좋아하구나, 그렇지 않니? 응, 그래. 너는 온라인 쇼핑에 대해 어떻게 생각하니, 토니야?", tip: "일반동사 후치 확인용 부가의문문 조립 기술(don't you?) 구동." }
+        ];
+
+        appData[4].main = [
+            { imgText: "Stanley+Digging+Holes", eng: "'Dig harder, Stanley! The harder you dig, the faster you'll finish!' yelled Mr. Sir.", kor: "'더 세게 파, 스탠리! 네가 더 세게 파면 팔수록, 너는 더 빠르게 끝낼 거야!' 미스터 써가 외쳤습니다.", tip: "The 비교급, the 비교급 주관식 서술형 1순위 문장 설계형." },
+            { imgText: "Camp+Green+Lake+Desert", eng: "Stanley Yelnats couldn't dig any harder since every single muscle hurt.", kor: "스탠리 옐낫츠는 모든 근육이 아팠기 때문에 더 세게 팔 수는 없었습니다.", tip: "여기서 since는 이유 유도 접속사기능 수행. every single + 단수명사 확인." },
+            { imgText: "Group+D+Boys", eng: "Group D. X-Ray, Zigzag and Zero. Each boy had to dig one hole every day.", kor: "D 그룹. 엑스레이, 지그재그 그리고 제로. 각각의 소년들은 매일 하나의 구멍을 파야 했습니다.", tip: "Each + 단수명사(boy) 구조식 일치 유도." },
+            { imgText: "Finding+Shiny+Gold+Tube", eng: "Stanley saw something shiny in the dirt. He carefully picked up the shiny object.", kor: "스탠리는 흙 속에서 반짝이는 무언가를 보았습니다. 그는 그 빛나는 물체를 주의 깊게 들어 올렸습니다.", tip: "saw 지각동사 구문 가동 및 -thing 명사의 형용사 후치 배열(something shiny)." }
+        ];
+
+        // ==================== 핵심 제어 엔진 로직 ====================
+        let currentLesson = "3";
+        let currentTab = "vocab";
+        let vocabIndex = 0;
+        let subTextTab = "dialog";
+
+        function updateVocabCard() {
+            const list = appData[currentLesson].vocab;
+            const item = list[vocabIndex];
+            document.getElementById("flashcard").classList.remove("flipped");
+            
+            setTimeout(() => {
+                document.getElementById("vocab-word").innerText = item.word;
+                document.getElementById("vocab-pron").innerText = item.pron;
+                document.getElementById("vocab-meaning").innerText = item.meaning;
+                document.getElementById("vocab-syn").innerText = item.syn;
+                document.getElementById("vocab-etym").innerText = item.etym;
+                
+                const engDefContainer = document.getElementById("eng-def-container");
+                if (item.eng && item.eng.trim() !== "") {
+                    engDefContainer.style.display = "block";
+                    document.getElementById("vocab-eng").innerText = item.eng;
+                } else {
+                    engDefContainer.style.display = "none";
+                }
+                
+                document.getElementById("vocab-index").innerText = `${vocabIndex + 1} / ${list.length}`;
+            }, 120);
+        }
+
+        function flipCard() {
+            document.getElementById("flashcard").classList.toggle("flipped");
+        }
+
+        function nextVocab() {
+            vocabIndex = (vocabIndex + 1) % appData[currentLesson].vocab.length;
+            updateVocabCard();
+        }
+
+        function prevVocab() {
+            const len = appData[currentLesson].vocab.length;
+            vocabIndex = (vocabIndex - 1 + len) % len;
+            updateVocabCard();
+        }
+
+        function renderGrammar() {
+            const container = document.getElementById("grammar-content");
+            container.innerHTML = "";
+            appData[currentLesson].grammar.forEach(g => {
+                const card = document.createElement("div");
+                card.className = "bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md space-y-2";
+                card.innerHTML = `
+                    <h3 class="text-xs font-black text-indigo-400">${g.title}</h3>
+                    <p class="text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded border border-slate-700/50 leading-relaxed">${g.desc}</p>
+                    <div class="text-[11px] text-emerald-400 font-mono pt-1 leading-normal">${g.ex}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderText() {
+            const container = document.getElementById("text-container");
+            container.innerHTML = "";
+            const list = appData[currentLesson][subTextTab];
+
+            list.forEach((t, i) => {
+                const card = document.createElement("div");
+                card.className = "bg-slate-800 rounded-lg border border-slate-700 overflow-hidden shadow-sm";
+                
+                // 이미지 깨짐 버그 완벽 수정: placehold.co 고해상도 그래픽 서비스로 안전 장치 바인딩
+                let imageHtml = "";
+                if (t.imgText) {
+                    imageHtml = `<img src="https://placehold.co/600x320/312e81/f8fafc?text=${t.imgText}" alt="${t.imgText}" class="w-full h-auto object-cover border-b border-slate-700">`;
+                }
+
+                card.innerHTML = `
+                    ${imageHtml}
+                    <div onclick="toggleText(${i})" class="p-3 active:bg-slate-700/50 transition-colors cursor-pointer flex justify-between items-start gap-2">
+                        <p class="text-xs font-semibold text-slate-200 font-mono tracking-tight leading-normal">${t.eng}</p>
+                        <span class="text-slate-500 text-[10px] mt-0.5">▼</span>
+                    </div>
+                    <div id="text-box-${i}" class="hidden bg-slate-900/80 px-3 pb-3 pt-1.5 border-t border-slate-700/60 space-y-1.5 animate-fadeIn">
+                        <p class="text-xs font-bold text-indigo-400">🇰🇷 해석: ${t.kor}</p>
+                        <p class="text-[11px] text-slate-400 border-l-2 border-slate-600 pl-2 leading-relaxed">${t.tip}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function toggleText(idx) {
+            document.getElementById(`text-box-${idx}`).classList.toggle("hidden");
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            ['vocab', 'grammar', 'text'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const sec = document.getElementById(`section-${t}`);
+                if (t === tab) {
+                    btn.className = "w-full py-3.5 text-center border-b-2 border-indigo-500 text-indigo-400 transition-colors";
+                    sec.className = "block space-y-4";
+                } else {
+                    btn.className = "w-full py-3.5 text-center border-b-2 border-transparent text-slate-400 transition-colors";
+                    sec.className = "hidden";
+                }
+            });
+            if(tab === 'grammar') renderGrammar();
+            if(tab === 'text') renderText();
+        }
+
+        function switchSubText(sub) {
+            subTextTab = sub;
+            const dBtn = document.getElementById("btn-subtext-dialog");
+            const mBtn = document.getElementById("btn-subtext-main");
+            if(sub === 'dialog') {
+                dBtn.className = "w-full py-2 rounded-md text-center bg-slate-700 text-indigo-400 shadow-sm";
+                mBtn.className = "w-full py-2 rounded-md text-center text-slate-400";
+            } else {
+                mBtn.className = "w-full py-2 rounded-md text-center bg-slate-700 text-indigo-400 shadow-sm";
+                dBtn.className = "w-full py-2 rounded-md text-center text-slate-400";
+            }
+            renderText();
+        }
+
+        function switchLesson() {
+            currentLesson = document.getElementById("lessonSelector").value;
+            vocabIndex = 0;
+            updateVocabCard();
+            if(currentTab === 'grammar') renderGrammar();
+            if(currentTab === 'text') renderText();
+        }
+
+        window.onload = function() {
+            updateVocabCard();
+        }
+    </script>
+</body>
+</html>
